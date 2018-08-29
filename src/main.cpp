@@ -31,15 +31,11 @@ int main()
   uWS::Hub h;
 
   // Create a Kalman Filter instance
-  cout << "1" << endl;
   FusionEKF fusionEKF;
 
   // used to compute the RMSE later
-  cout << "2" << endl;
   Tools tools;
-  cout << "3" << endl;
   vector<VectorXd> estimations;
-  cout << "4" << endl;
   vector<VectorXd> ground_truth;
 
   h.onMessage([&fusionEKF,&tools,&estimations,&ground_truth](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
@@ -47,13 +43,11 @@ int main()
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
 
-    cout << "5" << endl;
     if (length && length > 2 && data[0] == '4' && data[1] == '2')
     {
 
       auto s = hasData(std::string(data));
       if (s != "") {
-        cout << "5.1" << endl;
       	
         auto j = json::parse(s);
 
@@ -61,7 +55,6 @@ int main()
         
         if (event == "telemetry") {
           // j[1] is the data JSON object
-          cout << "5.2" << endl;
           
           string sensor_measurment = j[1]["sensor_measurement"];
           
@@ -69,13 +62,11 @@ int main()
           istringstream iss(sensor_measurment);
     	  long long timestamp;
 
-        cout << "5.3" << endl;
     	  // reads first element from the current line
     	  string sensor_type;
     	  iss >> sensor_type;
 
     	  if (sensor_type.compare("L") == 0) {
-              cout << "5.3.1" << endl;
       	  		meas_package.sensor_type_ = MeasurementPackage::LASER;
           		meas_package.raw_measurements_ = VectorXd(2);
           		float px;
@@ -85,9 +76,7 @@ int main()
           		meas_package.raw_measurements_ << px, py;
           		iss >> timestamp;
           		meas_package.timestamp_ = timestamp;
-              cout << "5.3.2" << endl;
           } else if (sensor_type.compare("R") == 0) {
-              cout << "5.3.3" << endl;
       	  		meas_package.sensor_type_ = MeasurementPackage::RADAR;
           		meas_package.raw_measurements_ = VectorXd(3);
           		float ro;
@@ -99,7 +88,6 @@ int main()
           		meas_package.raw_measurements_ << ro,theta, ro_dot;
           		iss >> timestamp;
           		meas_package.timestamp_ = timestamp;
-              cout << "5.3.4" << endl;
           }
         float x_gt;
     	  float y_gt;
@@ -114,7 +102,6 @@ int main()
     	  gt_values(1) = y_gt; 
     	  gt_values(2) = vx_gt;
     	  gt_values(3) = vy_gt;
-        cout << "5.4" << endl;
     	  ground_truth.push_back(gt_values);
           
           //Call ProcessMeasurment(meas_package) for Kalman filter
@@ -124,7 +111,6 @@ int main()
     	  //Push the current estimated x,y positon from the Kalman filter's state vector
 
     	  VectorXd estimate(4);
-        cout << "5.5" << endl;
 
     	  double p_x = fusionEKF.ekf_.x_(0);
     	  double p_y = fusionEKF.ekf_.x_(1);
@@ -136,11 +122,9 @@ int main()
     	  estimate(2) = v1;
     	  estimate(3) = v2;
     	  
-        cout << "5.6" << endl;
     	  estimations.push_back(estimate);
 
     	  VectorXd RMSE = tools.CalculateRMSE(estimations, ground_truth);
-        cout << "5.7" << endl;
 
           json msgJson;
           msgJson["estimate_x"] = p_x;
@@ -152,23 +136,19 @@ int main()
           auto msg = "42[\"estimate_marker\"," + msgJson.dump() + "]";
           // std::cout << msg << std::endl;
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
-          cout << "5.8" << endl;
         }
       } else {
         
         std::string msg = "42[\"manual\",{}]";
         ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
-        cout << "5.9" << endl;
       }
     }
-    cout << "6" << endl;
 
   });
 
   // We don't need this since we're not using HTTP but if it's removed the program
   // doesn't compile :-(
   h.onHttpRequest([](uWS::HttpResponse *res, uWS::HttpRequest req, char *data, size_t, size_t) {
-    cout << "7" << endl;
     const std::string s = "<h1>Hello world!</h1>";
     if (req.getUrl().valueLength == 1)
     {
@@ -179,13 +159,10 @@ int main()
       // i guess this should be done more gracefully?
       res->end(nullptr, 0);
     }
-    cout << "8" << endl;
   });
 
   h.onConnection([&h](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) {
-    cout << "9" << endl;
     std::cout << "Connected!!!" << std::endl;
-    cout << "10" << endl;
   });
 
   h.onDisconnection([&h](uWS::WebSocket<uWS::SERVER> ws, int code, char *message, size_t length) {

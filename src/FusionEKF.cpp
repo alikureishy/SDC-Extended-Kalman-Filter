@@ -16,20 +16,23 @@ FusionEKF::FusionEKF() {
 
   previous_timestamp_ = 0;
 
-  // initializing matrices
-  R_laser_ = MatrixXd(2, 2);
-  R_radar_ = MatrixXd(3, 3);
-  H_laser_ = MatrixXd(2, 4);
-  Hj_ = MatrixXd(3, 4);
-
   //measurement covariance matrix - laser
+  R_laser_ = MatrixXd(2, 2);
   R_laser_ << 0.0225, 0,
               0, 0.0225;
 
   //measurement covariance matrix - radar
+  R_radar_ = MatrixXd(3, 3);
   R_radar_ << 0.09, 0, 0,
               0, 0.0009, 0,
               0, 0, 0.09;
+
+  // measurement function and its jacobian:
+  H_laser_ = MatrixXd(2, 4);
+  H_laser_ << 1, 0, 0, 0,
+              0, 1, 0, 0;
+  Hj_ = MatrixXd(3, 4);
+
 }
 
 /**
@@ -69,13 +72,13 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
       */
       cout << "F.2.1.1" << endl;
       double rho = z(0);
-      double theta = z(1);
-      double rho_dot = z(2);
+      double phi = z(1);
+      //double rho_dot = z(2);
 
-      double px = rho * cos(theta);
-      double py = rho * sin(theta);
-      double vx = rho_dot * cos(theta);
-      double vy = rho_dot * sin(theta);
+      double px = rho * cos(phi);
+      double py = rho * sin(phi);
+      double vx = 0; // rho_dot * cos(theta);
+      double vy = 0; // rho_dot * sin(theta);
       ekf_.x_ << px, py, vx, vy;
 
     }
@@ -87,12 +90,13 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
   		ekf_.x_ << z(0), z(1), 0, 0;
     }
 
-    // Initial state uncertainty
+    // Initial covariance matrix
     cout << "F.2.2" << endl;
-    ekf_.P_ <<  1000, 0, 0, 0,
-                0, 1000, 0, 0,
-                0, 0, 1000, 0,
-                0, 0, 0, 1000;
+              // px, py, vx, vy
+    ekf_.P_ <<  1000,   0,    0,    0,  // px
+                0,    1000,   0,    0,  // py
+                0,      0,  1000,   0,  // vx
+                0,      0,    0,  1000; // vy
 
     // Initialize prediction function
     ekf_.F_ << 1, 0, 1, 0,
@@ -117,8 +121,8 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
      * Use noise_ax = 9 and noise_ay = 9 for your Q matrix.
    */
   // Update F for elapsed time
-	ekf_.F_(0, 2) *= dt;
-	ekf_.F_(1, 3) *= dt;
+	ekf_.F_(0, 2) = dt;
+	ekf_.F_(1, 3) = dt;
   cout << "F.3_" << endl;
 
   // Update Q with elapsed time

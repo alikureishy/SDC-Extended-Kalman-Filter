@@ -1,5 +1,6 @@
 #include "kalman_filter.h"
 #include "tools.h"
+#include <iostream>
 
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
@@ -11,23 +12,29 @@ KalmanFilter::KalmanFilter() {}
 
 KalmanFilter::~KalmanFilter() {}
 
-// void KalmanFilter::Init(VectorXd &x_in, MatrixXd &P_in, MatrixXd &F_in,
-//                         MatrixXd &H_in, MatrixXd &R_in, MatrixXd &Q_in) {
-//   x_ = x_in;
-//   P_ = P_in;
-//   F_ = F_in;
-//   H_ = H_in;
-//   R_ = R_in;
-//   Q_ = Q_in;
-// }
+void KalmanFilter::PrettyPrint() const {
+  cout << "\tx -> " << endl << x_ << endl;
+  cout << "\tP -> " << endl << P_ << endl;
+  cout << "\tF -> " << endl << F_ << endl;
+  cout << "\tQ -> " << endl << Q_ << endl;
+  cout << "\tH -> " << endl << H_ << endl;
+  cout << "\tR -> " << endl << R_ << endl;
+}
 
 void KalmanFilter::Predict() {
   /**
   TODO:
     * predict the state
   */
+  cout << "------" << endl;
+  cout << "PREDICT::" << endl;
+  cout << "Start..." << endl;
+  PrettyPrint();
   x_ = F_ * x_;
   P_ = F_ * P_ * F_.transpose() + Q_;
+  cout << "...End" << endl;
+  PrettyPrint();
+  cout << endl;
 }
 
 // For LIDAR measurements
@@ -36,11 +43,22 @@ void KalmanFilter::Update(const VectorXd &z) {
   TODO:
     * update the state by using Kalman Filter equations
   */
+  cout << "------" << endl;
+  cout << "UPDATE:: (" << z << ")" << endl;
+  cout << "Start..." << endl;
+  PrettyPrint();
   VectorXd y = z - H_ * x_;
-  MatrixXd S = H_ * P_ * H_.transpose() + R_;
-  MatrixXd K = P_.inverse() * H_.transpose() * S.inverse();
+  MatrixXd Ht = H_.transpose();
+  MatrixXd S = H_ * P_ * Ht + R_;
+  MatrixXd Si = S.inverse();
+  MatrixXd Pi = P_.inverse();
+  MatrixXd K = P_ * Ht * Si; //???Pi * Ht * Si;
   x_ = x_ + K * y;
-  P_ = (MatrixXd::Identity(K.rows(), H_.cols()) - K * H_) * P_.inverse();
+  MatrixXd I = MatrixXd::Identity(K.rows(), H_.cols());
+  P_ = (I - K * H_) * P_; //???(I - K * H_) * Pi;
+  cout << "...End" << endl;
+  PrettyPrint();
+  cout << endl;
 }
 
 // For RADAR measurements
@@ -49,18 +67,29 @@ void KalmanFilter::UpdateEKF(const VectorXd &z) {
   TODO:
     * update the state by using Extended Kalman Filter equations
   */
+  cout << "------" << endl;
+  cout << "UPDATE-EKF:: (" << z << ")" << endl;
+  cout << "Start..." << endl;
+  PrettyPrint();
   VectorXd y = z - h(x_);
-  MatrixXd S = H_ * P_ * H_.transpose() + R_;
-  MatrixXd K = P_.inverse() * H_.transpose() * S.inverse();
+  MatrixXd Ht = H_.transpose();
+  MatrixXd S = H_ * P_ * Ht + R_;
+  MatrixXd Si = S.inverse();
+  MatrixXd K = P_ * Ht * Si; //???Pi * Ht * Si;
   x_ = x_ + K * y;
-  P_ = (MatrixXd::Identity(K.rows(), H_.cols()) - K * H_) * P_.inverse();
+  MatrixXd I = MatrixXd::Identity(K.rows(), H_.cols());
+  P_ = (I - K * H_) * P_; //??? (I - K * H_) * Pi;
+  cout << "...End" << endl;
+  PrettyPrint();
+  cout << endl;
 }
 
-VectorXd KalmanFilter::h(const VectorXd& point) {
+// Convert cartesian coordinates to polar coordinates
+VectorXd KalmanFilter::h(const VectorXd& point) const {
   VectorXd t = VectorXd(3);
-  float s = sqrt(pow(x_(0),2) + pow(x_(1),2));
-  t(0) = s;
-  t(1) = atan(x_(1) / x_(0));
-  t(2) = (x_(0)*x_(2) + x_(1)*x_(3)) / s;
+  double r = sqrt(pow(x_(0),2) + pow(x_(1),2));
+  t(0) = r;
+  t(1) = atan2(x_(1) + M_1_PI, x_(0));
+  t(2) = (x_(0)*x_(2) + x_(1)*x_(3)) / max(1e-6, r) ;
   return t;
 }
