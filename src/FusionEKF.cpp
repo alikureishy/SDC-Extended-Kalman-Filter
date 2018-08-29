@@ -73,12 +73,12 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
       cout << "F.2.1.1" << endl;
       double rho = z(0);
       double phi = z(1);
-      //double rho_dot = z(2);
+      double rho_dot = z(2);
 
       double px = rho * cos(phi);
       double py = rho * sin(phi);
-      double vx = 0; // rho_dot * cos(theta);
-      double vy = 0; // rho_dot * sin(theta);
+      double vx = rho_dot * cos(phi);
+      double vy = rho_dot * sin(phi);
       ekf_.x_ << px, py, vx, vy;
 
     }
@@ -93,10 +93,10 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
     // Initial covariance matrix
     cout << "F.2.2" << endl;
               // px, py, vx, vy
-    ekf_.P_ <<  1000,   0,    0,    0,  // px
-                0,    1000,   0,    0,  // py
-                0,      0,  1000,   0,  // vx
-                0,      0,    0,  1000; // vy
+    ekf_.P_ <<  1,  0,  0,  0,  // px
+                0,  1,  0,  0,  // py
+                0,  0,  1,  0,  // vx
+                0,  0,  0,  1; // vy
 
     // Initialize prediction function
     ekf_.F_ << 1, 0, 1, 0,
